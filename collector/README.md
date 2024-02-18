@@ -8,5 +8,5 @@
 
 ## Installation
 ```sh
-$ go run .
+$ PORT=5000 GIN_MODE=debug go run .
 ```
