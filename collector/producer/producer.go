@@ -1,6 +1,9 @@
 package producer
 
 import (
+	"collector/event"
+	"encoding/json"
+
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
@@ -10,7 +13,12 @@ func Init() (*kafka.Producer, error) {
 		"acks":              "all"})
 }
 
-func Produce(p *kafka.Producer, topic string, value []byte) error {
+func Produce(p *kafka.Producer, topic string, e *event.Event) error {
+	value, err := json.Marshal(e)
+	if err != nil {
+		return err
+	}
+
 	msg := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 		Value:          value,

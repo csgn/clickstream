@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -14,33 +13,53 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func HandleEvent(c *gin.Context, p *kafka.Producer) {
-	b, err := io.ReadAll(c.Request.Body)
-	if err != nil {
+const GIF_PATH = "./resources/__gc.gif"
+
+func HandlePixel(c *gin.Context, p *kafka.Producer) {
+	e := event.Event{}
+	if err := c.ShouldBindQuery(&e); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
 		})
 		return
 	}
 
-	e, err := event.Unmarshal(b)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": err.Error(),
-		})
-		return
-	}
-
-	marsheled_event, err := event.Marshal(e)
-	if err != nil {
+	if err := e.Validate(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
 		})
 		return
 	}
 
-	err = producer.Produce(p, string(e.Channel), marsheled_event)
-	if err != nil {
+	if err := producer.Produce(p, string(e.Channel), &e); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	log.Println("Event sent success")
+
+	http.ServeFile(c.Writer, c.Request, GIF_PATH)
+}
+
+func HandleEvent(c *gin.Context, p *kafka.Producer) {
+	e := event.Event{}
+	if err := c.ShouldBindJSON(&e); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	if err := e.Validate(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	if err := producer.Produce(p, string(e.Channel), &e); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
 		})
@@ -69,6 +88,10 @@ func main() {
 
 	r.POST("/e", func(ctx *gin.Context) {
 		HandleEvent(ctx, p)
+	})
+
+	r.GET("/pixel", func(ctx *gin.Context) {
+		HandlePixel(ctx, p)
 	})
 
 	fmt.Printf(`

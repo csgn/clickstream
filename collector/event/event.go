@@ -1,7 +1,6 @@
 package event
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/go-playground/validator/v10"
@@ -22,19 +21,14 @@ const (
 )
 
 type Event struct {
-	Channel   channel `json:"channel" validate:"required"`
-	Variant   variant `json:"variant" validate:"required"`
-	Pid       string  `json:"pid" validate:"required,min=5"`
-	CreatedAt int64   `json:"createdAt" validate:"required"`
-	ViewedUrl string  `json:"viewedUrl" validate:"required,http_url"`
+	Channel   channel `json:"channel" form:"channel" validate:"required"`
+	Variant   variant `json:"variant" form:"variant" validate:"required"`
+	Pid       string  `json:"pid" form:"pid" validate:"required,min=5"`
+	CreatedAt int64   `json:"createdAt" form:"createdAt" validate:"required"`
+	ViewedUrl string  `json:"viewedUrl" form:"viewedUrl" validate:"required,uri"`
 }
 
-func (e *Event) Validate() error {
-	v := validator.New()
-	return v.Struct(e)
-}
-
-func (c channel) Validate() error {
+func (c channel) validate() error {
 	switch c {
 	case web:
 	case mobile:
@@ -47,7 +41,7 @@ func (c channel) Validate() error {
 	return nil
 }
 
-func (c variant) Validate() error {
+func (c variant) validate() error {
 	switch c {
 	case pageview:
 		break
@@ -58,31 +52,23 @@ func (c variant) Validate() error {
 	return nil
 }
 
-func Unmarshal(b []byte) (*Event, error) {
-	event := Event{}
-	err := json.Unmarshal(b, &event)
+func (e *Event) Validate() error {
+	v := validator.New()
+
+	err := v.Struct(e)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = event.Validate()
+	err = e.Channel.validate()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = event.Channel.Validate()
+	err = e.Variant.validate()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = event.Variant.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	return &event, nil
-}
-
-func Marshal(e *Event) ([]byte, error) {
-	return json.Marshal(e)
+	return nil
 }
