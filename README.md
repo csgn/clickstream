@@ -2,4 +2,4 @@
 
 ## Flow
 
-![flow](./flow.png)
+![flow](./docs/flow.png)
