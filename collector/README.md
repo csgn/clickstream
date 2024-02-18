@@ -1,7 +1,7 @@
 # collector
 
 >Collector is an http server.
->Receiving event data and producing to predetermined kafka topics.
+>Receives event data, validates it, and sends it to predetermined Kafka topics.
 
 ## Flow
 ![flow](./docs/flow.png)
