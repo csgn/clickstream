@@ -1,6 +1,6 @@
 # collector
 
->Collector is an http server.
+>Collector is an HTTP server.
 >Receives raw event, and sends it to Kafka topic.
 
 ## Flow
