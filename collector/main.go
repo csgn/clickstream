@@ -1,77 +1,72 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 
-	"collector/event"
-	"collector/producer"
-
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"github.com/gin-gonic/gin"
 )
 
-const GIF_PATH = "./resources/__gc.gif"
+const (
+	TOPIC    = "events"
+	GIF_PATH = "./resources/__gc.gif"
+)
 
-func HandlePixel(c *gin.Context, p *kafka.Producer) {
-	e := event.Event{}
-	if err := c.ShouldBindQuery(&e); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": err.Error(),
-		})
-		return
+func produce(p *kafka.Producer, b []byte) {
+	topic := TOPIC
+	msg := &kafka.Message{
+		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+		Value:          b,
 	}
 
-	if err := e.Validate(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": err.Error(),
-		})
-		return
-	}
-
-	if err := producer.Produce(p, string(e.Channel), &e); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": err.Error(),
-		})
-		return
-	}
-
-	log.Println("Event sent success")
-
-	http.ServeFile(c.Writer, c.Request, GIF_PATH)
+	p.Produce(msg, nil)
 }
 
-func HandleEvent(c *gin.Context, p *kafka.Producer) {
-	e := event.Event{}
-	if err := c.ShouldBindJSON(&e); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": err.Error(),
-		})
-		return
-	}
+func HandlePixel(w http.ResponseWriter, r *http.Request, p *kafka.Producer) {
+	if r.Method == http.MethodGet {
+		values, err := url.ParseQuery(r.URL.Query().Encode())
+		if err != nil {
+			fmt.Println("Error parsing query string:", err)
+			return
+		}
 
-	if err := e.Validate(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": err.Error(),
-		})
-		return
-	}
+		params := make(map[string]string)
+		for key, value := range values {
+			params[key] = value[0]
+		}
 
-	if err := producer.Produce(p, string(e.Channel), &e); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": err.Error(),
-		})
-		return
-	}
+		jsonString, err := json.Marshal(params)
+		if err != nil {
+			fmt.Println("Error marshaling to JSON:", err)
+			return
+		}
 
-	log.Println("Event sent success")
+		produce(p, []byte(jsonString))
+		http.ServeFile(w, r, GIF_PATH)
+	}
+}
+
+func HandleEvent(w http.ResponseWriter, r *http.Request, p *kafka.Producer) {
+	if r.Method == http.MethodPost {
+		b, err := io.ReadAll(r.Body)
+		if err != nil {
+			return
+		}
+
+		produce(p, b)
+	}
 }
 
 func main() {
 	log.Println("Starting kafka producer.")
-	p, err := producer.Init()
+	p, err := kafka.NewProducer(&kafka.ConfigMap{
+		"bootstrap.servers": "localhost",
+		"acks":              "all"})
 	defer p.Close()
 
 	if err != nil {
@@ -84,14 +79,12 @@ func main() {
 	port := os.Getenv("PORT")
 	host := fmt.Sprintf("127.0.0.1:%v", port)
 
-	r := gin.Default()
-
-	r.POST("/e", func(ctx *gin.Context) {
-		HandleEvent(ctx, p)
+	http.HandleFunc("/e", func(w http.ResponseWriter, r *http.Request) {
+		HandleEvent(w, r, p)
 	})
 
-	r.GET("/pixel", func(ctx *gin.Context) {
-		HandlePixel(ctx, p)
+	http.HandleFunc("/pixel", func(w http.ResponseWriter, r *http.Request) {
+		HandlePixel(w, r, p)
 	})
 
 	fmt.Printf(`
@@ -105,5 +98,5 @@ func main() {
    To close connection CTRL+C
   `, host)
 
-	r.Run(host)
+	http.ListenAndServe(host, nil)
 }

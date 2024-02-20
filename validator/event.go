@@ -1,4 +1,4 @@
-package event
+package main
 
 import (
 	"fmt"
@@ -21,11 +21,11 @@ const (
 )
 
 type Event struct {
-	Channel   channel `json:"channel" form:"channel" validate:"required"`
-	Variant   variant `json:"variant" form:"variant" validate:"required"`
-	Pid       string  `json:"pid" form:"pid" validate:"required,min=5"`
-	CreatedAt int64   `json:"createdAt" form:"createdAt" validate:"required"`
-	ViewedUrl string  `json:"viewedUrl" form:"viewedUrl" validate:"required,uri"`
+	Channel   channel `json:"channel" validate:"required"`
+	Variant   variant `json:"variant" validate:"required"`
+	Pid       string  `json:"pid" validate:"required,min=5"`
+	CreatedAt string  `json:"createdAt" validate:"required"`
+	ViewedUrl string  `json:"viewedUrl" validate:"required,uri"`
 }
 
 func (c channel) validate() error {
