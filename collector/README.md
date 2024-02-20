@@ -1,12 +1,12 @@
 # collector
 
 >Collector is an http server.
->Receives event data, validates it, and sends it to predetermined Kafka topics.
+>Receives raw event, and sends it to Kafka topic.
 
 ## Flow
 ![flow](./docs/flow.png)
 
 ## Installation
 ```sh
-$ PORT=5000 GIN_MODE=debug go run .
+$ PORT=5000 go run .
 ```
