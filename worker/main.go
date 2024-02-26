@@ -53,7 +53,6 @@ func main() {
 		"web",
 		"mobile",
 		"mobile-web",
-		"dirty-events",
 	}
 
 	err = c.SubscribeTopics(topics, nil)
