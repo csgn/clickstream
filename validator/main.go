@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
@@ -45,6 +46,14 @@ func validateAndProduce(p *kafka.Producer, value string) {
 }
 
 func main() {
+	fmt.Printf(`
+    ██    ██  █████  ██      ██ ██████   █████  ████████  ██████  ██████  
+    ██    ██ ██   ██ ██      ██ ██   ██ ██   ██    ██    ██    ██ ██   ██ 
+    ██    ██ ███████ ██      ██ ██   ██ ███████    ██    ██    ██ ██████  
+     ██  ██  ██   ██ ██      ██ ██   ██ ██   ██    ██    ██    ██ ██   ██ 
+      ████   ██   ██ ███████ ██ ██████  ██   ██    ██     ██████  ██   ██ 
+  `)
+
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": "localhost",
 		"group.id":          "localhost",
@@ -72,7 +81,7 @@ func main() {
 
 	run := true
 	for run {
-		ev := c.Poll(100)
+		ev := c.Poll(int(time.Millisecond))
 		switch e := ev.(type) {
 		case *kafka.Message:
 			validateAndProduce(p, string(e.Value))
